@@ -18,6 +18,7 @@ func usage() {
 
 func main() {
 	all := flag.Bool("a", false, "list all files including files that start with '.'")
+	inode := flag.Bool("i", false, "for each file, print the inode number")
 	long := flag.Bool("l", false, "list in long format")
 	reverse := flag.Bool("r", false, "reverse the order of the sort")
 	sortSize := flag.Bool("S", false, "sort by size")
@@ -57,22 +58,26 @@ func main() {
 
 	// print the list
 	if *long {
-		listFilesLong(files, *all)
+		listFilesLong(files, *all, *inode)
 	} else {
-		listFiles(files, *all)
+		listFiles(files, *all, *inode)
 	}
 
 }
 
-func listFiles(fis []os.FileInfo, all bool) {
+func listFiles(fis []os.FileInfo, all, inode bool) {
 	for _, fi := range fis {
+		if inode {
+			fmt.Printf("%8d ", getInode(fi))
+		}
+
 		if all || !strings.HasPrefix(fi.Name(), ".") {
 			fmt.Println(fi.Name())
 		}
 	}
 }
 
-func listFilesLong(fis []os.FileInfo, all bool) {
+func listFilesLong(fis []os.FileInfo, all, inode bool) {
 	// copy the file info into a new array of long file info with some extra attributes
 	// check the length of some columns as we go so we can space them correctly later
 	// turns out I can't get usernames and group names working (from uid / gid) so this is moot
@@ -89,6 +94,10 @@ func listFilesLong(fis []os.FileInfo, all bool) {
 	}
 
 	for _, lfi := range lfis {
+		if inode {
+			fmt.Printf("%8d ", getInode(lfi.fileInfo))
+		}
+
 		fmt.Printf("%s  ", lfi.fileInfo.Mode())
 		fmt.Printf("%10d  ", lfi.uid)
 		fmt.Printf("%10d  ", lfi.gid)
@@ -108,4 +117,13 @@ func formatDate(t time.Time) string {
 		formatted = t.Format("Jan _2  2006")
 	}
 	return formatted
+}
+
+func getInode(fi os.FileInfo) uint64 {
+	stat, ok := fi.Sys().(*syscall.Stat_t)
+	if !ok {
+		log.Fatalf("Not a syscall.Stat_t: %v\n", fi.Sys())
+	}
+
+	return stat.Ino
 }
