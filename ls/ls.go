@@ -19,6 +19,9 @@ func usage() {
 func main() {
 	all := flag.Bool("a", false, "list all files including files that start with '.'")
 	long := flag.Bool("l", false, "list in long format")
+	reverse := flag.Bool("r", false, "reverse the order of the sort")
+	sortSize := flag.Bool("S", false, "sort by size")
+	sortTime := flag.Bool("t", false, "sort by time modified")
 	flag.Parse()
 
 	filepath := "."
@@ -37,7 +40,22 @@ func main() {
 		log.Fatalf("Read directory error: %v\n", err)
 	}
 
-	sort.Slice(files, func(i, j int) bool { return files[i].Name() < files[j].Name() })
+	// sort the list
+	if *sortSize && !*reverse {
+		sort.Sort(bySize(files))
+	} else if *sortSize && *reverse {
+		sort.Sort(sort.Reverse(bySize(files)))
+	} else if *sortTime && !*reverse {
+		sort.Sort(byTime(files))
+	} else if *sortTime && *reverse {
+		sort.Sort(sort.Reverse(byTime(files)))
+	} else if !*reverse {
+		sort.Sort(byName(files))
+	} else {
+		sort.Sort(sort.Reverse(byName(files)))
+	}
+
+	// print the list
 	if *long {
 		listFilesLong(files, *all)
 	} else {
