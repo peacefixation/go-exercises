@@ -11,13 +11,10 @@ import (
 	"time"
 )
 
-func usage() {
-	fmt.Println("Usage: ls")
-	os.Exit(1)
-}
-
 func main() {
 	all := flag.Bool("a", false, "list all files including files that start with '.'")
+	noSort := flag.Bool("f", false, "output is not sorted")
+	human := flag.Bool("h", false, "show file size with unit suffixes (for byte, kilobyte, etc) to reduce the number of digits")
 	inode := flag.Bool("i", false, "for each file, print the inode number")
 	long := flag.Bool("l", false, "list in long format")
 	reverse := flag.Bool("r", false, "reverse the order of the sort")
@@ -41,33 +38,40 @@ func main() {
 		log.Fatalf("Read directory error: %v\n", err)
 	}
 
-	// sort the list
-	if *sortSize && !*reverse {
-		sort.Sort(bySize(files))
-	} else if *sortSize && *reverse {
-		sort.Sort(sort.Reverse(bySize(files)))
-	} else if *sortTime && !*reverse {
-		sort.Sort(byTime(files))
-	} else if *sortTime && *reverse {
-		sort.Sort(sort.Reverse(byTime(files)))
-	} else if !*reverse {
-		sort.Sort(byName(files))
-	} else {
-		sort.Sort(sort.Reverse(byName(files)))
+	if !*noSort {
+		// sort the list
+		if *sortSize {
+			sortList(bySize(files), *reverse)
+		} else if *sortTime {
+			sortList(byTime(files), *reverse)
+		} else {
+			// default sort by name
+			sortList(byName(files), *reverse)
+		}
 	}
 
 	// print the list
 	if *long {
-		listFilesLong(files, *all, *inode)
+		listFilesLong(files, *all, *inode, *human)
 	} else {
 		listFiles(files, *all, *inode)
 	}
 
 }
 
-func listFiles(fis []os.FileInfo, all, inode bool) {
+// sort an array that implements the sort.Interface
+func sortList(toSort sort.Interface, reverse bool) {
+	if reverse {
+		sort.Sort(sort.Reverse(toSort))
+	} else {
+		sort.Sort(toSort)
+	}
+}
+
+// print the list of os.FileInfo
+func listFiles(fis []os.FileInfo, all, showInode bool) {
 	for _, fi := range fis {
-		if inode {
+		if showInode {
 			fmt.Printf("%8d ", getInode(fi))
 		}
 
@@ -77,7 +81,8 @@ func listFiles(fis []os.FileInfo, all, inode bool) {
 	}
 }
 
-func listFilesLong(fis []os.FileInfo, all, inode bool) {
+// print the list of os.FileInfo and show extra information
+func listFilesLong(fis []os.FileInfo, all, showInode, human bool) {
 	// copy the file info into a new array of long file info with some extra attributes
 	// check the length of some columns as we go so we can space them correctly later
 	// turns out I can't get usernames and group names working (from uid / gid) so this is moot
@@ -94,20 +99,25 @@ func listFilesLong(fis []os.FileInfo, all, inode bool) {
 	}
 
 	for _, lfi := range lfis {
-		if inode {
+		if showInode {
 			fmt.Printf("%8d ", getInode(lfi.fileInfo))
 		}
 
 		fmt.Printf("%s  ", lfi.fileInfo.Mode())
 		fmt.Printf("%10d  ", lfi.uid)
 		fmt.Printf("%10d  ", lfi.gid)
-		fmt.Printf("%10d  ", lfi.fileInfo.Size())
+		if human {
+			fmt.Printf("%10s  ", convertUnits(lfi.fileInfo.Size()))
+		} else {
+			fmt.Printf("%10d  ", lfi.fileInfo.Size())
+		}
 		fmt.Printf("%s  ", formatDate(lfi.fileInfo.ModTime()))
 		fmt.Printf("%s", lfi.fileInfo.Name())
 		fmt.Println()
 	}
 }
 
+// format a time.Time, show the year if it's more than 1 year old
 func formatDate(t time.Time) string {
 	oneYearAgo := time.Now().AddDate(-1, 0, 0)
 	var formatted string
@@ -119,6 +129,7 @@ func formatDate(t time.Time) string {
 	return formatted
 }
 
+// get the inode for an os.FileInfo
 func getInode(fi os.FileInfo) uint64 {
 	stat, ok := fi.Sys().(*syscall.Stat_t)
 	if !ok {
@@ -126,4 +137,16 @@ func getInode(fi os.FileInfo) uint64 {
 	}
 
 	return stat.Ino
+}
+
+// convert a file size to larger units to reduce the number of digits
+func convertUnits(size int64) string {
+	magnitude := 0
+	units := []string{"B", "K", "M", "G", "T"}
+	for size > 1024 && magnitude < len(units)-1 {
+		size /= 1024
+		magnitude++
+	}
+
+	return fmt.Sprintf("%d%s", size, units[magnitude])
 }
