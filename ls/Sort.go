@@ -5,6 +5,7 @@ import "os"
 // sort by size
 type bySize []os.FileInfo
 
+// implement sort.Interface
 func (files bySize) Len() int {
 	return len(files)
 }

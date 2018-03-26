@@ -18,6 +18,7 @@ func main() {
 	inode := flag.Bool("i", false, "for each file, print the inode number")
 	long := flag.Bool("l", false, "list in long format")
 	reverse := flag.Bool("r", false, "reverse the order of the sort")
+	recursive := flag.Bool("R", false, "recursively list subdirectories")
 	sortSize := flag.Bool("S", false, "sort by size")
 	sortTime := flag.Bool("t", false, "sort by time modified")
 	flag.Parse()
@@ -27,6 +28,13 @@ func main() {
 		filepath = flag.Arg(0)
 	}
 
+	files := readPath(filepath)
+
+	// print the list
+	listFiles(filepath, files, *all, *long, *inode, *human, *noSort, *sortSize, *sortTime, *reverse, *recursive)
+}
+
+func readPath(filepath string) []os.FileInfo {
 	file, err := os.Open(filepath)
 	if err != nil {
 		log.Fatalf("Open file error: %v\n", err)
@@ -38,25 +46,19 @@ func main() {
 		log.Fatalf("Read directory error: %v\n", err)
 	}
 
-	if !*noSort {
-		// sort the list
-		if *sortSize {
-			sortList(bySize(files), *reverse)
-		} else if *sortTime {
-			sortList(byTime(files), *reverse)
-		} else {
-			// default sort by name
-			sortList(byName(files), *reverse)
-		}
-	}
+	return files
+}
 
-	// print the list
-	if *long {
-		listFilesLong(files, *all, *inode, *human)
+func sortFiles(files []os.FileInfo, sortSize, sortTime, reverse bool) {
+	// sort the list
+	if sortSize {
+		sortList(bySize(files), reverse)
+	} else if sortTime {
+		sortList(byTime(files), reverse)
 	} else {
-		listFiles(files, *all, *inode)
+		// default sort by name
+		sortList(byName(files), reverse)
 	}
-
 }
 
 // sort an array that implements the sort.Interface
@@ -68,72 +70,75 @@ func sortList(toSort sort.Interface, reverse bool) {
 	}
 }
 
-// print the list of os.FileInfo
-func listFiles(fis []os.FileInfo, all, showInode bool) {
-	for _, fi := range fis {
-		if showInode {
-			fmt.Printf("%8d ", getInode(fi))
-		}
+// print the list of files
+func listFiles(basepath string, files []os.FileInfo, all, long, inode, human, noSort, sortSize, sortTime,
+	reverse, recursive bool) {
 
-		if all || !strings.HasPrefix(fi.Name(), ".") {
-			fmt.Println(fi.Name())
+	if !noSort {
+		sortFiles(files, sortSize, sortTime, reverse)
+	}
+
+	for _, file := range files {
+		if all || !strings.HasPrefix(file.Name(), ".") {
+			printFile(file, long, inode, human)
+		}
+	}
+
+	for _, file := range files {
+		if file.Mode().IsDir() {
+			dirpath := basepath + "/" + file.Name()
+			fmt.Println()
+			subDirFiles := readPath(dirpath)
+			printPath(dirpath)
+			listFiles(dirpath, subDirFiles, all, long, inode, human, noSort, sortSize, sortTime, reverse, recursive)
 		}
 	}
 }
 
-// print the list of os.FileInfo and show extra information
-func listFilesLong(fis []os.FileInfo, all, showInode, human bool) {
-	// copy the file info into a new array of long file info with some extra attributes
-	// check the length of some columns as we go so we can space them correctly later
-	// turns out I can't get usernames and group names working (from uid / gid) so this is moot
-	var lfis []LongFileInfo
-	for _, fi := range fis {
-		if all || !strings.HasPrefix(fi.Name(), ".") {
-			longFileInfo := new(LongFileInfo)
-			longFileInfo.fileInfo = fi
-			longFileInfo.uid = fi.Sys().(*syscall.Stat_t).Uid
-			longFileInfo.gid = fi.Sys().(*syscall.Stat_t).Gid
-
-			lfis = append(lfis, *longFileInfo)
-		}
+// print a file
+func printFile(file os.FileInfo, long, inode, human bool) {
+	if inode {
+		fmt.Printf("%8d ", getInode(file))
 	}
 
-	for _, lfi := range lfis {
-		if showInode {
-			fmt.Printf("%8d ", getInode(lfi.fileInfo))
-		}
-
-		fmt.Printf("%s  ", lfi.fileInfo.Mode())
-		fmt.Printf("%10d  ", lfi.uid)
-		fmt.Printf("%10d  ", lfi.gid)
+	if long {
+		fmt.Printf("%s  ", file.Mode())
+		fmt.Printf("%10d  ", file.Sys().(*syscall.Stat_t).Uid)
+		fmt.Printf("%10d  ", file.Sys().(*syscall.Stat_t).Gid)
 		if human {
-			fmt.Printf("%10s  ", convertUnits(lfi.fileInfo.Size()))
+			fmt.Printf("%10s  ", convertUnits(file.Size()))
 		} else {
-			fmt.Printf("%10d  ", lfi.fileInfo.Size())
+			fmt.Printf("%10d  ", file.Size())
 		}
-		fmt.Printf("%s  ", formatDate(lfi.fileInfo.ModTime()))
-		fmt.Printf("%s", lfi.fileInfo.Name())
-		fmt.Println()
+		fmt.Printf("%s  ", formatDate(file.ModTime()))
 	}
+
+	fmt.Printf("%s", file.Name())
+	fmt.Println()
 }
 
-// format a time.Time, show the year if it's more than 1 year old
-func formatDate(t time.Time) string {
+// print a path
+func printPath(path string) {
+	fmt.Println(path + ":")
+}
+
+// format the date, show the year if it's more than 1 year old
+func formatDate(date time.Time) string {
 	oneYearAgo := time.Now().AddDate(-1, 0, 0)
 	var formatted string
-	if t.After(oneYearAgo) {
-		formatted = t.Format("Jan _2 15:04")
+	if date.After(oneYearAgo) {
+		formatted = date.Format("Jan _2 15:04")
 	} else {
-		formatted = t.Format("Jan _2  2006")
+		formatted = date.Format("Jan _2  2006")
 	}
 	return formatted
 }
 
-// get the inode for an os.FileInfo
-func getInode(fi os.FileInfo) uint64 {
-	stat, ok := fi.Sys().(*syscall.Stat_t)
+// get the inode for a file
+func getInode(file os.FileInfo) uint64 {
+	stat, ok := file.Sys().(*syscall.Stat_t)
 	if !ok {
-		log.Fatalf("Not a syscall.Stat_t: %v\n", fi.Sys())
+		log.Fatalf("Not a syscall.Stat_t: %v\n", file.Sys())
 	}
 
 	return stat.Ino

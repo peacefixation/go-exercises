@@ -1,5 +1,9 @@
 package main
 
+/*
+This is not used. Need to learn how to perform uid/gid lookups cross platform.
+*/
+
 import (
 	"fmt"
 	"os"
