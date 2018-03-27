@@ -83,7 +83,7 @@ func listFiles(basepath string, files []os.FileInfo, all, long, inode, human, no
 	// print the files
 	for _, file := range files {
 		if all || !strings.HasPrefix(file.Name(), ".") {
-			printFile(file, long, inode, human)
+			printFile(basepath, file, long, inode, human)
 		}
 	}
 
@@ -101,7 +101,7 @@ func listFiles(basepath string, files []os.FileInfo, all, long, inode, human, no
 }
 
 // print a file
-func printFile(file os.FileInfo, long, inode, human bool) {
+func printFile(basepath string, file os.FileInfo, long, inode, human bool) {
 	if inode {
 		fmt.Printf("%8d ", getInode(file))
 	}
@@ -119,6 +119,16 @@ func printFile(file os.FileInfo, long, inode, human bool) {
 	}
 
 	fmt.Printf("%s", file.Name())
+
+	filepath := basepath + "/" + file.Name()
+	if long && isLink(filepath) {
+		link, err := os.Readlink(filepath)
+		if err != nil {
+			log.Fatalf("Error reading link: %v\n", err)
+		}
+		fmt.Printf(" -> %s", link)
+	}
+
 	fmt.Println()
 }
 
@@ -159,4 +169,14 @@ func convertUnits(size int64) string {
 	}
 
 	return fmt.Sprintf("%d%s", size, units[magnitude])
+}
+
+// check if the path is a link
+func isLink(path string) bool {
+	file, err := os.Lstat(path)
+	if err != nil {
+		log.Fatalf("Error checking link status: %v\n", err)
+	}
+
+	return file.Mode()&os.ModeSymlink != 0
 }
