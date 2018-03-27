@@ -23,19 +23,20 @@ func main() {
 	sortTime := flag.Bool("t", false, "sort by time modified")
 	flag.Parse()
 
-	filepath := "."
+	path := "."
 	if flag.NArg() > 0 {
-		filepath = flag.Arg(0)
+		path = strings.TrimSuffix(flag.Arg(0), "/")
 	}
 
-	files := readPath(filepath)
+	files := readPath(path)
 
 	// print the list
-	listFiles(filepath, files, *all, *long, *inode, *human, *noSort, *sortSize, *sortTime, *reverse, *recursive)
+	listFiles(path, files, *all, *long, *inode, *human, *noSort, *sortSize, *sortTime, *reverse, *recursive)
 }
 
-func readPath(filepath string) []os.FileInfo {
-	file, err := os.Open(filepath)
+// read a directory path and return the files it contains
+func readPath(path string) []os.FileInfo {
+	file, err := os.Open(path)
 	if err != nil {
 		log.Fatalf("Open file error: %v\n", err)
 	}
@@ -49,6 +50,7 @@ func readPath(filepath string) []os.FileInfo {
 	return files
 }
 
+// sort files according to sort type
 func sortFiles(files []os.FileInfo, sortSize, sortTime, reverse bool) {
 	// sort the list
 	if sortSize {
@@ -78,19 +80,22 @@ func listFiles(basepath string, files []os.FileInfo, all, long, inode, human, no
 		sortFiles(files, sortSize, sortTime, reverse)
 	}
 
+	// print the files
 	for _, file := range files {
 		if all || !strings.HasPrefix(file.Name(), ".") {
 			printFile(file, long, inode, human)
 		}
 	}
 
-	for _, file := range files {
-		if file.Mode().IsDir() {
-			dirpath := basepath + "/" + file.Name()
-			fmt.Println()
-			subDirFiles := readPath(dirpath)
-			printPath(dirpath)
-			listFiles(dirpath, subDirFiles, all, long, inode, human, noSort, sortSize, sortTime, reverse, recursive)
+	if recursive {
+		// print the files in each subdirectory
+		for _, file := range files {
+			if file.Mode().IsDir() {
+				dirpath := basepath + "/" + file.Name()
+				subDirFiles := readPath(dirpath)
+				printPath(dirpath)
+				listFiles(dirpath, subDirFiles, all, long, inode, human, noSort, sortSize, sortTime, reverse, recursive)
+			}
 		}
 	}
 }
@@ -119,7 +124,7 @@ func printFile(file os.FileInfo, long, inode, human bool) {
 
 // print a path
 func printPath(path string) {
-	fmt.Println(path + ":")
+	fmt.Println("\n" + path + ":")
 }
 
 // format the date, show the year if it's more than 1 year old
