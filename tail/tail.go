@@ -39,7 +39,7 @@ func main() {
 	}
 }
 
-// read (up to) numLines from a file
+// read (up to) numLines from the end of a file
 func readLines(file *os.File, numLines int) {
 	fileInfo, err := file.Stat()
 	if err != nil {
@@ -81,6 +81,7 @@ func readLines(file *os.File, numLines int) {
 
 	var bufSize int64 = 512
 
+	// read the file in chunks of bufSize from the startPos to the end
 	for {
 		buf := make([]byte, bufSize)
 		_, err := file.ReadAt(buf, startPos)
