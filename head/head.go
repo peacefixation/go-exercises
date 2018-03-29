@@ -43,17 +43,6 @@ func main() {
 
 // read (up to) numLines from the start of a file
 func readLines(file *os.File, numLines int) {
-	fileInfo, err := file.Stat()
-	if err != nil {
-		log.Fatalf("File error: %v\n", err)
-	}
-
-	fileSize := fileInfo.Size()
-
-	if fileSize == 0 {
-		return
-	}
-
 	var foundLines int
 
 	reader := bufio.NewReader(file)
