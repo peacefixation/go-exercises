@@ -39,7 +39,8 @@ func TestDecompress6(t *testing.T) {
 }
 
 func testDecompress(t *testing.T, compressed, expected []rune) {
-	decompressed := Decompress(compressed)
+	d := Decompressor{}
+	decompressed := d.Decompress(compressed)
 	if !isEqual(decompressed, expected) {
 		t.Errorf("Decompress failed for '%s', got: '%s', want: '%s'.", string(compressed), string(decompressed), string(expected))
 	}
