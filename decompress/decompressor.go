@@ -63,7 +63,6 @@ func skip(text []rune, start int) int {
 	for ; i < len(text) && text[i] != ']'; i++ {
 		if unicode.IsDigit(text[i]) {
 			for ; unicode.IsDigit(text[i]); i++ {
-				i++
 			}
 			i++ // iterate past the '['
 
