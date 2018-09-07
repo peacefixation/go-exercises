@@ -7,21 +7,13 @@ import (
 
 // algorithm from http://warp.povusers.org/Mandelbrot/
 
-var colorMap map[int]color.Color
-var numColors int
-
-func init() {
-	colorMap = make(map[int]color.Color)
-	colorMap[0] = color.RGBA{100, 0, 0, 255}
-	colorMap[1] = color.RGBA{175, 0, 0, 255}
-	colorMap[2] = color.RGBA{255, 0, 0, 255}
-	numColors = len(colorMap)
-}
-
 // Draw a Mandelbrot fractal with the given dimensions
-func Draw(width, height int) *image.RGBA {
+func Draw(width, height int, palette Palette) *image.RGBA {
 	// create an image
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
+
+	// count the number of colors in the palette
+	numColors := len(palette.Colors)
 
 	ImageHeight := float64(height)
 	ImageWidth := float64(width)
@@ -62,7 +54,7 @@ func Draw(width, height int) *image.RGBA {
 				img.Set(x, y, color.RGBA{0, 0, 0, 255})
 			} else {
 				// draw a colored pixel
-				img.Set(x, y, colorMap[n%numColors])
+				img.Set(x, y, palette.Colors[n%numColors])
 			}
 		}
 	}
