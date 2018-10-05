@@ -13,7 +13,8 @@ func main() {
 			0: color.RGBA{100, 0, 0, 255},
 			1: color.RGBA{175, 0, 0, 255},
 			2: color.RGBA{255, 0, 0, 255},
-		}}
+		},
+		NumColors: 3}
 
 	img := Draw(400, 400, palette)
 

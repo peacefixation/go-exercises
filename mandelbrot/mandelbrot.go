@@ -9,55 +9,53 @@ import (
 
 // Draw a Mandelbrot fractal with the given dimensions
 func Draw(width, height int, palette Palette) *image.RGBA {
-	// create an image
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
 
-	// count the number of colors in the palette
-	numColors := len(palette.Colors)
+	imageHeight := float64(height)
+	imageWidth := float64(width)
 
-	ImageHeight := float64(height)
-	ImageWidth := float64(width)
-
-	MinRe := -2.0
-	MaxRe := 1.0
-	MinIm := -1.2
-	MaxIm := MinIm + (MaxRe-MinRe)*ImageHeight/ImageWidth
-	ReFactor := (MaxRe - MinRe) / (ImageWidth - 1)
-	ImFactor := (MaxIm - MinIm) / (ImageHeight - 1)
-	MaxIterations := 100
+	minRe := -2.2
+	maxRe := 0.8
+	minIm := -1.5
+	maxIm := minIm + (maxRe-minRe)*imageHeight/imageWidth
+	reFactor := (maxRe - minRe) / (imageWidth - 1)
+	imFactor := (maxIm - minIm) / (imageHeight - 1)
+	maxIterations := 100000
 
 	for y := 0; y < height; y++ {
-		cIm := MaxIm - float64(y)*ImFactor
+		cIm := maxIm - float64(y)*imFactor
 		for x := 0; x < width; x++ {
-			cRe := MinRe + float64(x)*ReFactor
+			cRe := minRe + float64(x)*reFactor
 
-			zRe := cRe
-			zIm := cIm
-			isInside := true
-			n := 0
-			for ; n < MaxIterations; n++ {
-				zRe2 := zRe * zRe
-				zIm2 := zIm * zIm
+			inside, n := inside(x, y, cRe, cIm, maxIterations)
 
-				if zRe2+zIm2 > 4 {
-					isInside = false
-					break
-				}
-
-				// z = z^2 + c
-				zIm = 2*zRe*zIm + cIm
-				zRe = zRe2 - zIm2 + cRe
-			}
-
-			if isInside {
-				// draw a black pixel
+			if inside {
 				img.Set(x, y, color.RGBA{0, 0, 0, 255})
 			} else {
-				// draw a colored pixel
-				img.Set(x, y, palette.Colors[n%numColors])
+				img.Set(x, y, palette.Colors[n%palette.NumColors])
 			}
 		}
 	}
 
 	return img
+}
+
+func inside(x, y int, cRe, cIm float64, maxIterations int) (bool, int) {
+	zRe := cRe
+	zIm := cIm
+	n := 0
+	for ; n < maxIterations; n++ {
+		zRe2 := zRe * zRe
+		zIm2 := zIm * zIm
+
+		if zRe2+zIm2 > 4 {
+			return false, n
+		}
+
+		// z = z^2 + c
+		zIm = 2*zRe*zIm + cIm
+		zRe = zRe2 - zIm2 + cRe
+	}
+
+	return true, n
 }
