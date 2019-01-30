@@ -1,0 +1,28 @@
+<table>
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Created On</th>
+        <th>Account Balance</th>
+    </tr>
+    <tr>
+        {{$n := len .}}
+        {{if eq $n 0}}
+        <tr>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+        </tr>
+        {{end}}
+
+        {{range .}}
+        <tr>
+            <td>{{.ID}}</td>
+            <td>{{.FullName}}</td>
+            <td>{{formatDate .CreatedOn "Jan 2 2006"}}</td>
+            <td>{{formatCurrency .AccountBalance }}</td>
+        </tr>
+        {{end}}
+    </tr>
+</table>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <style>
+                html {
+                    font-family: Arial, sans-serif;
+                    color: #666666;
+                }
+        
+                h1,
+                h2,
+                h3 {
+                    color: green;
+                }
+        
+                table {
+                    border: 1px #666666 solid;
+                    border-collapse: collapse;
+                }
+        
+                table th {
+                    color: green;
+                    border: 1px #666666 solid;
+                    padding: 5px;
+                }
+        
+                table td {
+                    border: 1px #666666 solid;
+                    padding: 5px;
+                }
+            </style>
+    </head>
+    <body>
+        <div>
+            {{.Header}}
+        </div>
+        <br />
+        <div>
+            {{.Body}}
+        </div>
+        <br />
+        <div>
+            {{.Footer}}
+        </div>
+    </body>
+</html>
