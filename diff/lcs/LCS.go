@@ -50,10 +50,10 @@ func PrintDiffRecursive(c [][]int, xs, ys []string, i, j int) {
 	if i > 0 && j > 0 && xs[i-1] == ys[j-1] {
 		PrintDiffRecursive(c, xs, ys, i-1, j-1)
 		fmt.Printf("  %s\n", xs[i-1])
-	} else if j > 0 && (i == 0 || c[i][j-1] > c[i-1][j]) {
+	} else if j > 0 && (i == 0 || c[i][j-1] >= c[i-1][j]) {
 		PrintDiffRecursive(c, xs, ys, i, j-1)
 		fmt.Printf("+ %s\n", ys[j-1])
-	} else if i > 0 && (j == 0 || c[i][j-1] <= c[i-1][j]) {
+	} else if i > 0 && (j == 0 || c[i][j-1] < c[i-1][j]) {
 		PrintDiffRecursive(c, xs, ys, i-1, j)
 		fmt.Printf("- %s\n", xs[i-1])
 	}
@@ -62,28 +62,24 @@ func PrintDiffRecursive(c [][]int, xs, ys []string, i, j int) {
 // PrintDiffIterative print the diff of xs and ys using iteration
 // store diff in memory to print in reverse order
 func PrintDiffIterative(c [][]int, xs, ys []string) {
-	i := len(xs)
-	j := len(ys)
+	// store the lines so they can be printed in reverse order
+	lines := make([]string, 0)
 
-	// store the strings so they can be printed in reverse order
-	strs := make([]string, 0)
-
-	for i > 0 && j > 0 {
-		if xs[i-1] == ys[j-1] {
-			strs = append(strs, fmt.Sprintf("  %s", xs[i-1]))
+	for i, j := len(xs), len(ys); i > 0 || j > 0; {
+		if i > 0 && c[i][j] == c[i-1][j] {
 			i--
+			lines = append(lines, fmt.Sprintf("- %s", xs[i]))
+		} else if j > 0 && c[i][j] == c[i][j-1] {
 			j--
-		} else if c[i-1][j] > c[i][j-1] {
-			strs = append(strs, fmt.Sprintf("- %s", xs[i-1]))
-			i--
+			lines = append(lines, fmt.Sprintf("+ %s", ys[j]))
 		} else {
-			strs = append(strs, fmt.Sprintf("+ %s", ys[j-1]))
+			i--
 			j--
+			lines = append(lines, fmt.Sprintf("  %s", xs[i]))
 		}
 	}
 
-	// print the strings in reverse order
-	for i := len(strs) - 1; i >= 0; i-- {
-		fmt.Println(strs[i])
+	for i := len(lines) - 1; i >= 0; i-- {
+		fmt.Println(lines[i])
 	}
 }
